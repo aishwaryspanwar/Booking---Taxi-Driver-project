@@ -69,6 +69,10 @@ frontend/ (React + Vite)      ──fetch──►   backend/ (FastAPI)      ─
 | GET | `/api/requests`, `/api/requests/{id}` | List requests or get one with its offers. When no supplier can serve it, says why (M2). |
 | POST | `/api/offers/{id}/book` | Book a taxi (R8). Checks the car again for R6, returns the booking number, and marks the other offers not chosen. |
 | POST | `/api/offers/{id}/reject` | Reject a taxi (R8) |
+| GET | `/api/companies` | Suppliers with their cars (role picker) |
+| GET | `/api/suppliers/{company_id}/requests` | Open requests this supplier can serve (R4–R6). Each car is marked "fits and is free" or lists the rules it breaks. |
+| GET | `/api/suppliers/{company_id}/offers` | Taxis this supplier assigned, with status `OPEN` / `BOOKED` / `REJECTED` / `NOT_CHOSEN` |
+| POST | `/api/requests/{id}/offers` | Assign a car + price (R7). Body `{company_id, vehicle_id, price_inr}`. Price = traveler's price (accept) or another price in range (counter-offer). Checks R3–R7. |
 
 ## What is done
 
@@ -87,10 +91,6 @@ frontend/ (React + Vite)      ──fetch──►   backend/ (FastAPI)      ─
   (RIDE-0001), so only SC-3 can be assigned.
 
 ## Not built yet / known limitations
-
-- **Supplier APIs are in progress (being built separately):** `GET /api/companies`,
-  `GET /api/suppliers/{company_id}/requests`, `GET /api/suppliers/{company_id}/offers`,
-  `POST /api/requests/{id}/offers`. The frontend's supplier pages already call these paths.
 
 - **M5 Booking summary page and lookup by number:** not built. The booking number and the ride
   details show on the request page, and they are saved in the database.
