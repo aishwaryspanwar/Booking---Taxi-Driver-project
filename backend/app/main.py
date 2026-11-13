@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .db import Base, engine
-from .routers import catalog, requests, suppliers
+from .routers import bookings, catalog, requests, suppliers
 from .rules import RuleViolation
 
 app = FastAPI(title="Airport Taxi - Ride Offers")
@@ -43,6 +43,7 @@ def validation_handler(_: Request, exc: RequestValidationError):
 app.include_router(catalog.router, prefix="/api")
 app.include_router(requests.router, prefix="/api")
 app.include_router(suppliers.router, prefix="/api")
+app.include_router(bookings.router, prefix="/api")
 
 
 @app.get("/api/health")

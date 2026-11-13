@@ -44,4 +44,12 @@ export const api = {
   supplierRequests: (companyId) => request(`/suppliers/${encodeURIComponent(companyId)}/requests`),
   supplierOffers: (companyId) => request(`/suppliers/${encodeURIComponent(companyId)}/offers`),
   assignCar: (requestId, body) => post(`/requests/${encodeURIComponent(requestId)}/offers`, body),
+
+  // Booking summary (M5) and change requests (M7)
+  listBookings: () => request("/bookings"),
+  getBooking: (number) => request(`/bookings/${encodeURIComponent(number)}`),
+  requestChange: (number, body) => post(`/bookings/${encodeURIComponent(number)}/changes`, body),
+  supplierChanges: (companyId) => request(`/suppliers/${encodeURIComponent(companyId)}/changes`),
+  acceptChange: (changeId, companyId) => post(`/changes/${changeId}/accept`, { company_id: companyId }),
+  rejectChange: (changeId, companyId) => post(`/changes/${changeId}/reject`, { company_id: companyId }),
 };

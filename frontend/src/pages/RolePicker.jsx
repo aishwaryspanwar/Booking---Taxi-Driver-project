@@ -15,22 +15,33 @@ export default function RolePicker() {
 
   return (
     <>
-      <h1>Who are you?</h1>
-      <p className="muted">No login needed. Pick a role; you can switch at any time.</p>
+      <section className="hero">
+        <span className="over">Airport taxi · Ride offers</span>
+        <h1 className="display">Your ride from the airport,<br />at the price you choose.</h1>
+        <p className="lede">
+          Travelers post a ride with their price. Taxi suppliers answer with a car and a price.
+          No login needed: pick who you are, and switch at any time.
+        </p>
+      </section>
       <Errors errors={errors} />
 
-      <h2>Traveler</h2>
       <div className="roles">
-        <button className="role-btn" onClick={() => navigate("/traveler")}>
-          <strong>I am a traveler</strong>
-          Request a ride from the airport to my hotel
-        </button>
-      </div>
+        <div className="card">
+          <span className="over">Traveler</span>
+          <h3>I need a ride to my hotel</h3>
+          <p className="grow">
+            Pick your flight and hotel, see the suggested price range, post your price, then book the taxi you like.
+          </p>
+          <div>
+            <button className="primary lg" onClick={() => navigate("/traveler")}>Request a ride</button>
+          </div>
+        </div>
 
-      <h2>Taxi supplier</h2>
-      <div className="card">
-        <label htmlFor="supplier">Choose your company</label>
-        <div className="row">
+        <div className="card">
+          <span className="over">Taxi supplier</span>
+          <h3>I drive airport rides</h3>
+          <label htmlFor="supplier">Choose your company</label>
+          <div className="row">
           <select id="supplier" style={{ flex: 1, minWidth: 240 }} value={companyId}
             onChange={(e) => setCompanyId(e.target.value)}>
             <option value="">Select a taxi supplier…</option>
@@ -43,6 +54,7 @@ export default function RolePicker() {
           <button className="primary" disabled={!companyId} onClick={() => navigate(`/supplier/${companyId}`)}>
             Continue
           </button>
+          </div>
         </div>
       </div>
     </>

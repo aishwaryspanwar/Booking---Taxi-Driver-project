@@ -30,8 +30,11 @@ export default function RequestOffers() {
 
   return (
     <>
-      <p><Link to="/traveler">← All requests</Link></p>
-      <h1>{req.traveler_name} · {req.request_id}</h1>
+      <div className="page-head">
+        <Link to="/traveler" className="btn-link">← All requests</Link>
+        <span className="over">Ride request · {req.request_id}</span>
+        <h1>{req.traveler_name}</h1>
+      </div>
 
       <div className="card grid">
         <div><label>Flight</label>{req.flight.flight_number} ({req.flight.from}→{req.flight.to}), lands {when(req.flight.arrival_local)}</div>
@@ -51,6 +54,12 @@ export default function RequestOffers() {
           <div>
             {booked.company_name} · {booked.vehicle.type} {booked.vehicle.vehicle_id} · {inr(booked.price_inr)} ·
             pickup {when(req.pickup)} at {req.flight.to} → {req.hotel.name}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Link to={`/bookings/${req.booking.booking_number}`}>
+              <strong>Open booking summary →</strong>
+            </Link>
+            <span className="small"> · see the ride details or send a change request</span>
           </div>
         </div>
       )}

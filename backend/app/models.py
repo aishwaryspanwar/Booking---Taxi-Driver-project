@@ -144,3 +144,27 @@ class Booking(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     offer: Mapped[Offer] = relationship()
+    changes: Mapped[list["ChangeRequest"]] = relationship(back_populates="booking", order_by="ChangeRequest.id")
+
+
+class ChangeRequest(Base):
+    """The traveler asks for a new flight and/or pickup after booking (R9, M7).
+
+    The supplier accepts or rejects it. On accept the booking moves to the new
+    time; on reject the old booking stays as it was.
+    """
+    __tablename__ = "change_requests"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    booking_number: Mapped[str] = mapped_column(ForeignKey("bookings.booking_number"))
+    old_flight_id: Mapped[str] = mapped_column(ForeignKey("flights.flight_id"))
+    old_pickup: Mapped[datetime] = mapped_column(DateTime)
+    new_flight_id: Mapped[str] = mapped_column(ForeignKey("flights.flight_id"))
+    new_pickup: Mapped[datetime] = mapped_column(DateTime)
+    status: Mapped[str] = mapped_column(String, default="WAITING")  # WAITING | ACCEPTED | REJECTED
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)  # why it was rejected
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    booking: Mapped[Booking] = relationship(back_populates="changes")
+    old_flight: Mapped[Flight] = relationship(foreign_keys=[old_flight_id])
+    new_flight: Mapped[Flight] = relationship(foreign_keys=[new_flight_id])

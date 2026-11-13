@@ -163,15 +163,23 @@ def busy_window(req: RideRequest, route: Route) -> tuple[datetime, datetime]:
     return req.pickup, req.pickup + timedelta(minutes=2 * route.drive_minutes)
 
 
-def check_car_free(db: Session, vehicle_id: str, start: datetime, end: datetime) -> list[RuleError]:
-    """Overlap = one starts before the other ends. Touching ends do not overlap."""
+def check_car_free(db: Session, vehicle_id: str, start: datetime, end: datetime,
+                   ignore_booking: str | None = None) -> list[RuleError]:
+    """Overlap = one starts before the other ends. Touching ends do not overlap.
+
+    ignore_booking: a booking number to leave out. Used for a change request (R9),
+    so the booking does not clash with its own old time.
+    """
     ride = db.scalar(select(BookedRide).where(
         BookedRide.vehicle_id == vehicle_id, BookedRide.start < end, BookedRide.end > start))
     if ride:
         return [RuleError("R6", f"{vehicle_id} is busy {fmt(ride.start)} – {ride.end:%H:%M} "
                                 f"(ride {ride.ride_id}); this ride needs it {fmt(start)} – {end:%H:%M}.")]
-    booking = db.scalar(select(Booking).where(
-        Booking.vehicle_id == vehicle_id, Booking.busy_start < end, Booking.busy_end > start))
+    query = select(Booking).where(
+        Booking.vehicle_id == vehicle_id, Booking.busy_start < end, Booking.busy_end > start)
+    if ignore_booking:
+        query = query.where(Booking.booking_number != ignore_booking)
+    booking = db.scalar(query)
     if booking:
         return [RuleError("R6", f"{vehicle_id} is already booked {fmt(booking.busy_start)} – "
                                 f"{booking.busy_end:%H:%M}; this ride needs it {fmt(start)} – {end:%H:%M}.")]

@@ -3,9 +3,10 @@
 Travelers post a ride request from the airport to their hotel with their own price. Taxi
 suppliers see the requests they can serve and assign a car with a price: the traveler's price
 to accept it, or a different price as a counter-offer. The traveler then books one taxi or
-rejects it.
+rejects it. The booking number opens a summary, and the traveler can ask for a change if the
+flight changes.
 
-Scope of this pass: **M1–M4** (ride request, supplier dashboard, assign a car, book or reject).
+Status: **all must-haves (M1–M7) are done.**
 
 ## Run it
 
@@ -33,7 +34,7 @@ The frontend calls `http://localhost:8000/api` by default. Set `VITE_API_URL` in
 ```
 frontend/ (React + Vite)      ──fetch──►   backend/ (FastAPI)      ──SQLAlchemy──►  PostgreSQL
   src/api.js  all API calls                  app/routers/*  HTTP only
-  src/pages/* one file per screen            app/rules.py   every rule R1–R8
+  src/pages/* one file per screen            app/rules.py   every rule R1–R9
                                              app/models.py  tables
                                              seed.py        data/*.json → tables
 ```
@@ -58,6 +59,7 @@ frontend/ (React + Vite)      ──fetch──►   backend/ (FastAPI)      ─
 | ride_requests | app + `open_requests.json` | status `OPEN` / `BOOKED` |
 | offers | app | one car + price from one supplier; `OPEN` / `BOOKED` / `REJECTED` / `NOT_CHOSEN` |
 | bookings | app | 10-digit `booking_number`, the car, and its busy window |
+| change_requests | app | old and new flight + pickup; `WAITING` / `ACCEPTED` / `REJECTED`, with the reason when rejected |
 
 ### API
 
@@ -73,6 +75,11 @@ frontend/ (React + Vite)      ──fetch──►   backend/ (FastAPI)      ─
 | GET | `/api/suppliers/{company_id}/requests` | Open requests this supplier can serve (R4–R6). Each car is marked "fits and is free" or lists the rules it breaks. |
 | GET | `/api/suppliers/{company_id}/offers` | Taxis this supplier assigned, with status `OPEN` / `BOOKED` / `REJECTED` / `NOT_CHOSEN` |
 | POST | `/api/requests/{id}/offers` | Assign a car + price (R7). Body `{company_id, vehicle_id, price_inr}`. Price = traveler's price (accept) or another price in range (counter-offer). Checks R3–R7. |
+| GET | `/api/bookings/{booking_number}` | Booking summary (M5): flight, hotel, pickup, supplier, car, price, change requests. Wrong number: 404 "not found". |
+| POST | `/api/bookings/{booking_number}/changes` | Traveler asks for a change (R9). Body `{flight_id?, pickup?}`. Checks R1 and R2 for the new flight/pickup. |
+| GET | `/api/suppliers/{company_id}/changes` | Change requests for this supplier's bookings. A waiting one shows in advance whether accepting would pass R2/R6. |
+| POST | `/api/changes/{id}/accept` | Supplier accepts (R9). Body `{company_id}`. Only if the new pickup follows R2 and the same car is free; otherwise the platform refuses and the old booking stays. |
+| POST | `/api/changes/{id}/reject` | Supplier rejects. The old booking stays. |
 
 ## What is done
 
@@ -86,15 +93,27 @@ frontend/ (React + Vite)      ──fetch──►   backend/ (FastAPI)      ─
 - **M4 Book or reject.** The offers page refreshes every 5 s and labels each taxi "Your price" or
   "+₹X / −₹X". Booking gives a unique 10-digit number. A rejected taxi cannot be booked, and
   booking a car that became busy is refused.
+- **M5 Booking summary.** "My booking" opens a booking by its 10-digit number: flight, hotel,
+  pickup, supplier, car, price and the car's busy time. A wrong number shows "Booking not found".
+  It is read from the database, so it works after a backend restart.
+- **M6 No double booking.** Booking checks the car again against `booked_rides` and every app
+  booking. If the busy times overlap, the booking is refused with an R6 message.
+- **M7 Flight change.** On the booking page the traveler picks a new flight and/or pickup. The
+  supplier sees it under "Change requests" and accepts or rejects it. Accept works only if the
+  new pickup is at least 60 min after the new flight lands (R2) and the same car is free at the
+  new time (R6, ignoring the booking's own old time). If not, the platform refuses it, the
+  change becomes rejected with the reason, and the old booking stays. The booking page shows
+  every change and its result.
 - Car type (G2) is enforced, because `open_requests.json` uses it.
 - Seeded busy rides block cars. In the Menon case, Sakura's SC-2 is busy 11:00–14:00
   (RIDE-0001), so only SC-3 can be assigned.
 
 ## Not built yet / known limitations
 
-- **M5 Booking summary page and lookup by number:** not built. The booking number and the ride
-  details show on the request page, and they are saved in the database.
-- **M7 / R9 Change requests:** no routes yet.
+- **Change requests:** the new flight must land at the same airport as the booking, because
+  the supplier, route and price were agreed for that airport. One change can wait at a time.
+  Accepting checks R2 and the car's free time, as R9 says; it does not re-check the
+  supplier's opening hours, so the supplier should reject a time it can't serve.
 - **G1/G4/G5, S1/S2:** not built. A supplier can already assign several different cars to one
   request.
 - There is no login, so the traveler page lists every request.

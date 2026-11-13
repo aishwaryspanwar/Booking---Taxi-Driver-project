@@ -10,7 +10,11 @@ export default function SupplierDashboard() {
   const dash = usePolling(() => api.supplierRequests(companyId), [companyId]);
   const mine = usePolling(() => api.supplierOffers(companyId), [companyId]);
 
-  const reloadAll = () => { dash.reload(); mine.reload(); };
+  const [notice, setNotice] = useState(null);   // "Assigned SC-3 at ₹12,000 ..." after an offer
+
+  // After an offer: show the confirmation, then reload both lists
+  // (the request leaves "Requests you can serve" and appears in "Your taxis").
+  const afterAssign = (message) => { setNotice(message); dash.reload(); mine.reload(); };
 
   if (dash.error && !dash.data) return <Errors errors={toErrors(dash.error)} />;
   if (!dash.data) return <p className="muted">Loading…</p>;
@@ -18,17 +22,29 @@ export default function SupplierDashboard() {
 
   return (
     <>
-      <h1>{company.name}</h1>
-      <p className="muted small">
+      <div className="page-head">
+        <span className="over">Supplier dashboard</span>
+        <h1>{company.name}</h1>
+      </div>
+      <p className="muted small" style={{ marginTop: -16, marginBottom: 8 }}>
         Airports {company.airports.join(", ")} · open {company.service_from}–{company.service_until} ·
         areas: {company.areas.map((a) => a.area).join(", ")}
       </p>
 
+      {notice && <div className="success">{notice}</div>}
+
       <h2>Requests you can serve ({requests.length})</h2>
-      {requests.length === 0 && <p className="muted">No open requests you can serve right now. Refreshes every 5 seconds.</p>}
+      {requests.length === 0 && (
+        <p className="muted">
+          No new requests you can serve right now. Requests you already offered a car on are in “Your taxis”.
+          Refreshes every 5 seconds.
+        </p>
+      )}
       {requests.map((r) => (
-        <RequestCard key={r.request_id} req={r} company={company} onAssigned={reloadAll} />
+        <RequestCard key={r.request_id} req={r} company={company} onAssigned={afterAssign} />
       ))}
+
+      <ChangeRequests companyId={company.company_id} />
 
       <h2>Your taxis</h2>
       {!mine.data || mine.data.length === 0 ? (
@@ -56,18 +72,90 @@ export default function SupplierDashboard() {
   );
 }
 
+// M7: change requests for this supplier's bookings. Accept works only if the
+// new pickup follows R2 and the same car is free (R9); the backend decides.
+function ChangeRequests({ companyId }) {
+  const { data: changes, reload } = usePolling(() => api.supplierChanges(companyId), [companyId]);
+  const [errors, setErrors] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  async function decide(change, accept) {
+    setErrors(null);
+    setBusyId(change.change_id);
+    try {
+      if (accept) await api.acceptChange(change.change_id, companyId);
+      else await api.rejectChange(change.change_id, companyId);
+    } catch (err) {
+      setErrors(toErrors(err));   // e.g. the platform refused: car busy at the new time
+    } finally {
+      setBusyId(null);
+      reload();
+    }
+  }
+
+  if (!changes || changes.length === 0) return null;
+  const waiting = changes.filter((c) => c.status === "WAITING").length;
+
+  return (
+    <>
+      <h2>Change requests {waiting > 0 && <span className="tag waiting">{waiting} waiting</span>}</h2>
+      <Errors errors={errors} />
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Booking</th><th>Traveler</th><th>From</th><th>To</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {changes.map((c) => (
+              <tr key={c.change_id}>
+                <td>{c.booking_number}<div className="small muted">car {c.vehicle_id}</div></td>
+                <td>{c.traveler_name}<div className="small muted">{c.hotel}</div></td>
+                <td>{c.old_flight.flight_number}<div className="small muted">pickup {when(c.old_pickup)}</div></td>
+                <td>{c.new_flight.flight_number}<div className="small muted">pickup {when(c.new_pickup)}</div></td>
+                <td>
+                  <span className={`tag ${c.status.toLowerCase()}`}>{statusText(c.status)}</span>
+                  {c.reason && <div className="small muted" style={{ maxWidth: 260 }}>{c.reason}</div>}
+                </td>
+                <td>
+                  {c.status === "WAITING" && (
+                    <>
+                      <div className="row">
+                        <button className="primary" disabled={busyId === c.change_id} onClick={() => decide(c, true)}>Accept</button>
+                        <button disabled={busyId === c.change_id} onClick={() => decide(c, false)}>Reject</button>
+                      </div>
+                      <div className="small" style={{ marginTop: 6, maxWidth: 280 }}>
+                        {c.problems.length === 0
+                          ? <span className="diff-same">Car is free at the new time.</span>
+                          : <span style={{ color: "var(--danger)" }}>{c.problems.map((p) => `${p.rule}: ${p.message}`).join(" ")}</span>}
+                      </div>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+// Text after each car in the dropdown: "fits and is free", or the rules it breaks.
+function carStatus(car) {
+  if (car.ok) return "fits and is free";
+  return car.problems.map((p) => `${p.rule}: ${p.message}`).join(" ");
+}
+
 function RequestCard({ req, company, onAssigned }) {
   const firstOk = req.cars.find((c) => c.ok)?.vehicle_id || "";
   const [vehicleId, setVehicleId] = useState(firstOk);
   const [showCounter, setShowCounter] = useState(false);
   const [counterPrice, setCounterPrice] = useState("");
   const [errors, setErrors] = useState(null);
-  const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
 
   async function assign(price) {
     setErrors(null);
-    setMessage(null);
     setBusy(true);
     try {
       const offer = await api.assignCar(req.request_id, {
@@ -75,12 +163,11 @@ function RequestCard({ req, company, onAssigned }) {
         vehicle_id: vehicleId,
         price_inr: price,
       });
-      setMessage(`Assigned ${offer.vehicle.vehicle_id} at ${inr(offer.price_inr)}.`);
-      setShowCounter(false);
-      setCounterPrice("");
-      onAssigned();
+      // The card leaves the list now (it is offered), so the dashboard shows the confirmation
+      onAssigned(`Assigned ${offer.vehicle.vehicle_id} at ${inr(offer.price_inr)} to ${req.request_id}. ` +
+        "It is in “Your taxis” until the traveler books or rejects it.");
     } catch (err) {
-      setErrors(toErrors(err));
+      setErrors(toErrors(err));   // e.g. R6: car busy, R3: price out of range
     } finally {
       setBusy(false);
     }
@@ -106,7 +193,7 @@ function RequestCard({ req, company, onAssigned }) {
           {req.cars.map((c) => (
             <option key={c.vehicle_id} value={c.vehicle_id}>
               {c.vehicle_id} · {c.type} · {c.seats} seats · {c.large_bags}L/{c.small_bags}S bags —{" "}
-              {c.ok ? "fits and is free" : c.problems.map((p) => `${p.rule}: ${p.message}`).join(" ")}
+              {carStatus(c)}
             </option>
           ))}
         </select>
@@ -133,13 +220,6 @@ function RequestCard({ req, company, onAssigned }) {
       )}
 
       <Errors errors={errors} />
-      {message && <div className="success">{message}</div>}
-
-      {req.my_offers.length > 0 && (
-        <p className="small muted">
-          Your offers here: {req.my_offers.map((o) => `${o.vehicle.vehicle_id} ${inr(o.price_inr)} (${statusText(o.status)})`).join(", ")}
-        </p>
-      )}
     </div>
   );
 }

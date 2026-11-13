@@ -74,7 +74,11 @@ export default function TravelerHome() {
 
   return (
     <>
-      <h1>Request a ride</h1>
+      <div className="page-head">
+        <span className="over">Traveler</span>
+        <h1>Request a ride</h1>
+        <p className="lede">Choose your flight and hotel to see the suggested price range, then post your price.</p>
+      </div>
       <form className="card" onSubmit={submit} noValidate>
         <div className="grid">
           <div>

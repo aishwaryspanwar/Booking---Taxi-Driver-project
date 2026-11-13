@@ -38,6 +38,27 @@ class OfferIn(BaseModel):
     price_inr: int
 
 
+class ChangeIn(BaseModel):
+    """Traveler's change request (R9): a new flight, a new pickup, or both."""
+    flight_id: str | None = None     # None = keep the booked flight
+    pickup: datetime | None = None   # None = earliest pickup of the (new) flight
+
+    @field_validator("pickup")
+    @classmethod
+    def drop_timezone(cls, v):
+        return v.replace(tzinfo=None, second=0, microsecond=0) if v else v
+
+    @field_validator("flight_id", mode="before")
+    @classmethod
+    def blank_flight(cls, v):
+        return v or None
+
+
+class DecisionIn(BaseModel):
+    """Supplier's answer to a change request. company_id proves it is their booking."""
+    company_id: str
+
+
 # ---------- Outputs ----------
 
 def iso(d: datetime | None) -> str | None:
