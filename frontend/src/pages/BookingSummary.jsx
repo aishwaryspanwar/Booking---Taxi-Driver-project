@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import Errors, { toErrors } from "../components/Errors.jsx";
 import { inr, passengersText, statusText, timeOnly, when } from "../format.js";
@@ -90,6 +90,17 @@ function Lookup({ initial }) {
 function Summary({ number }) {
   const { data: booking, error, reload } = usePolling(() => api.getBooking(number), [number]);
 
+  // Opened from a "Change flight" button (?change=1): jump to the change form once
+  const [searchParams] = useSearchParams();
+  const wantsChange = searchParams.get("change") === "1";
+  const jumped = useRef(false);
+  useEffect(() => {
+    if (!booking || !wantsChange || jumped.current) return;
+    jumped.current = true;
+    document.getElementById("change-request")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("new-flight")?.focus({ preventScroll: true });
+  }, [booking, wantsChange]);
+
   if (error && !booking) {
     if (error.status === 404) {
       return <div className="errors"><strong>Booking not found.</strong> No booking has the number {number}. Check the 10 digits.</div>;
@@ -119,7 +130,7 @@ function Summary({ number }) {
         </p>
       </div>
 
-      <h2>Change request</h2>
+      <h2 id="change-request">Change flight or pickup</h2>
       {booking.has_waiting_change ? (
         <div className="range">Your change request is waiting for {booking.supplier.name}. This page refreshes every 5 seconds.</div>
       ) : (

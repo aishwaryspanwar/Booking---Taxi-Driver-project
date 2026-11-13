@@ -191,17 +191,23 @@ def create_request(body: RideRequestIn, db: Session = Depends(get_db)):
 #
 # Purpose : list all requests (there is no login), newest first.
 # Output  : list of requests, each with "offer_count" (number of taxis offered)
+#           and "booking_number" (None until booked; used by the
+#           "Change flight" button, M7)
 # =============================================================================
 @router.get("/requests")
 def list_requests(db: Session = Depends(get_db)):
     query = select(RideRequest).order_by(RideRequest.created_at.desc())
     ride_requests = db.scalars(query).all()
 
+    # request_id -> booking number, in one query
+    booking_numbers = dict(db.execute(select(Booking.request_id, Booking.booking_number)).all())
+
     result = []
     for ride_request in ride_requests:
         route = rules.request_route(db, ride_request)
         item = request_out(ride_request, route)
         item["offer_count"] = len(ride_request.offers)
+        item["booking_number"] = booking_numbers.get(ride_request.request_id)
         result.append(item)
     return result
 

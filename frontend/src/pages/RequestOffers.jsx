@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import Errors, { toErrors } from "../components/Errors.jsx";
 import { inr, passengersText, priceLabel, statusText, timeOnly, when } from "../format.js";
@@ -7,6 +7,7 @@ import usePolling from "../usePolling.js";
 
 export default function RequestOffers() {
   const { requestId } = useParams();
+  const navigate = useNavigate();
   const { data: req, error, setData } = usePolling(() => api.getRequest(requestId), [requestId]);
   const [actionErrors, setActionErrors] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -55,11 +56,14 @@ export default function RequestOffers() {
             {booked.company_name} · {booked.vehicle.type} {booked.vehicle.vehicle_id} · {inr(booked.price_inr)} ·
             pickup {when(req.pickup)} at {req.flight.to} → {req.hotel.name}
           </div>
-          <div style={{ marginTop: 12 }}>
-            <Link to={`/bookings/${req.booking.booking_number}`}>
-              <strong>Open booking summary →</strong>
-            </Link>
-            <span className="small"> · see the ride details or send a change request</span>
+          <div className="row" style={{ marginTop: 12 }}>
+            <button className="primary" onClick={() => navigate(`/bookings/${req.booking.booking_number}`)}>
+              Open booking summary
+            </button>
+            {/* M7: flight changed? ask the supplier for a new flight or pickup */}
+            <button onClick={() => navigate(`/bookings/${req.booking.booking_number}?change=1`)}>
+              Change flight or pickup
+            </button>
           </div>
         </div>
       )}

@@ -178,7 +178,7 @@ export default function TravelerHome() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Request</th><th>Traveler</th><th>Route</th><th>Pickup</th><th>Price</th><th>Taxis</th><th>Status</th></tr>
+              <tr><th>Request</th><th>Traveler</th><th>Route</th><th>Pickup</th><th>Price</th><th>Taxis</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               {myRequests.map((r) => (
@@ -190,6 +190,14 @@ export default function TravelerHome() {
                   <td>{inr(r.price_inr)}</td>
                   <td>{r.offer_count}</td>
                   <td><span className={`tag ${r.status.toLowerCase()}`}>{r.status.toLowerCase()}</span></td>
+                  <td>
+                    {/* M7: a booked ride can ask for a new flight or pickup */}
+                    {r.booking_number && (
+                      <button onClick={() => navigate(`/bookings/${r.booking_number}?change=1`)}>
+                        Change flight
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
