@@ -8,9 +8,15 @@ export default function RolePicker() {
   const [companies, setCompanies] = useState([]);
   const [errors, setErrors] = useState(null);
   const [companyId, setCompanyId] = useState("");
+  const [travelers, setTravelers] = useState([]);   // requests still open or booked
+  const [requestId, setRequestId] = useState("");
 
   useEffect(() => {
     api.companies().then(setCompanies, (e) => setErrors(toErrors(e)));
+    api.listRequests().then(
+      (list) => setTravelers(list.filter((r) => r.status === "OPEN" || r.status === "BOOKED")),
+      (e) => setErrors(toErrors(e))
+    );
   }, []);
 
   return (
@@ -33,8 +39,29 @@ export default function RolePicker() {
             Pick your flight and hotel, see the suggested price range, post your price, then book the taxi you like.
           </p>
           <div>
-            <button className="primary lg" onClick={() => navigate("/traveler")}>Request a ride</button>
+            <button className="primary lg" onClick={() => navigate("/traveler")}>Start as a new traveler</button>
           </div>
+          {travelers.length > 0 && (
+            <>
+              <label htmlFor="traveler" style={{ marginTop: 20 }}>Or continue an existing request</label>
+              <div className="row">
+                <select id="traveler" style={{ flex: 1, minWidth: 240 }} value={requestId}
+                  onChange={(e) => setRequestId(e.target.value)}>
+                  <option value="">Select your traveler ID…</option>
+                  {travelers.map((r) => (
+                    <option key={r.request_id} value={r.request_id}>
+                      {r.request_id} · {r.traveler_name} · {r.hotel.city} ·{" "}
+                      {r.status === "BOOKED" ? `Booked ${r.booking_number ?? ""}`.trim() : `Open, ${r.offer_count} taxi offers`}
+                    </option>
+                  ))}
+                </select>
+                <button className="primary" disabled={!requestId}
+                  onClick={() => navigate(`/traveler/requests/${requestId}`)}>
+                  Continue
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="card">
