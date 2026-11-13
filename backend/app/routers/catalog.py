@@ -54,17 +54,40 @@ def list_flights(db: Session = Depends(get_db)):
 
 # -----------------------------------------------------------------------------
 # GET /api/hotels
+# GET /api/hotels?flight_id=FL-401
 #
-# Purpose : list every hotel for the hotel dropdown.
-# Input   : none
+# Purpose : list hotels for the hotel dropdown.
+# Input   : flight_id (query string, optional)
+#           - given   : only hotels in a city served by the flight's arrival
+#                       airport (flight.to_airport -> Airport.serves_cities)
+#           - omitted : every hotel (old behaviour, kept for compatibility)
 # Output  : list of hotels, sorted by city, then area, then name
-#           (the frontend groups them by city)
+#           (the frontend groups them by city). Empty list if none match.
+# Errors  : 404 with an R1 message if the flight is not in the catalog
 # -----------------------------------------------------------------------------
 @router.get("/hotels")
-def list_hotels(db: Session = Depends(get_db)):
+def list_hotels(flight_id: str | None = None, db: Session = Depends(get_db)):
     query = select(Hotel).order_by(Hotel.city, Hotel.area, Hotel.name)
-    hotels = db.scalars(query)
 
+    if flight_id is not None:
+        # 1. Find the selected flight
+        flight = db.get(Flight, flight_id)
+        if not flight:
+            raise rules.RuleViolation(
+                [rules.RuleError("R1", f"Flight '{flight_id}' is not in the catalog.")],
+                status_code=404,
+            )
+
+        # 2. Cities served by the airport the flight lands at
+        airport = db.get(Airport, flight.to_airport)
+        served_cities = (airport.serves_cities if airport else None) or []
+        if not served_cities:
+            return []
+
+        # 3. Filter in the database: only hotels in one of those cities
+        query = query.where(Hotel.city.in_(served_cities))
+
+    hotels = db.scalars(query)
     return [hotel_out(hotel) for hotel in hotels]
 
 

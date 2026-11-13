@@ -25,23 +25,59 @@ export default function TravelerHome() {
   const [form, setForm] = useState(EMPTY);
   const [range, setRange] = useState(null);
   const [rangeErrors, setRangeErrors] = useState(null);
+  const [hotelErrors, setHotelErrors] = useState(null);
+  const [hotelsFor, setHotelsFor] = useState(""); // flight id the current hotel list was loaded for
   const [errors, setErrors] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    Promise.all([api.flights(), api.hotels(), api.listRequests()]).then(
-      ([f, h, r]) => { setFlights(f); setHotels(h); setMyRequests(r); },
+    Promise.all([api.flights(), api.listRequests()]).then(
+      ([f, r]) => { setFlights(f); setMyRequests(r); },
       (e) => setErrors(toErrors(e))
     );
   }, []);
 
+  // Hotels depend on the chosen flight: the backend returns only hotels in cities
+  // served by the flight's arrival airport. Refetch every time the flight changes.
+  useEffect(() => {
+    setHotelErrors(null);
+    if (!form.flight_id) {
+      setHotels([]);
+      setHotelsFor("");
+      setForm((f) => (f.hotel_id ? { ...f, hotel_id: "" } : f));
+      return;
+    }
+    let cancelled = false; // ignore late answers if the flight changes again
+    const flightId = form.flight_id;
+    api.hotels(flightId).then(
+      (list) => {
+        if (cancelled) return;
+        setHotels(list);
+        setHotelsFor(flightId);
+        // Drop the previously chosen hotel if it is not valid for the new flight.
+        setForm((f) => (list.some((h) => h.hotel_id === f.hotel_id) ? f : { ...f, hotel_id: "" }));
+      },
+      (e) => {
+        if (cancelled) return;
+        setHotels([]);
+        setForm((f) => ({ ...f, hotel_id: "" }));
+        setHotelErrors(toErrors(e));
+      }
+    );
+    return () => { cancelled = true; };
+  }, [form.flight_id]);
+
+  const hotelsLoading = Boolean(form.flight_id) && hotelsFor !== form.flight_id && !hotelErrors;
+
   // Live price range (R3) and R1 check whenever flight + hotel are both chosen.
+  // Waits until the hotel list matches the chosen flight, so a hotel left over
+  // from the previous flight never triggers a false R1 error.
   useEffect(() => {
     setRange(null);
     setRangeErrors(null);
-    if (!form.flight_id || !form.hotel_id) return;
+    if (!form.flight_id || !form.hotel_id || hotelsFor !== form.flight_id) return;
     api.priceRange(form.flight_id, form.hotel_id).then(setRange, (e) => setRangeErrors(toErrors(e)));
-  }, [form.flight_id, form.hotel_id]);
+  }, [form.flight_id, form.hotel_id, hotelsFor]);
 
   const hotelsByCity = useMemo(() => {
     const groups = {};
@@ -98,8 +134,14 @@ export default function TravelerHome() {
           </div>
           <div>
             <label htmlFor="hotel">Hotel</label>
-            <select id="hotel" value={form.hotel_id} onChange={set("hotel_id")}>
-              <option value="">Choose a hotel…</option>
+            <select id="hotel" value={form.hotel_id} onChange={set("hotel_id")}
+              disabled={!form.flight_id || hotelsLoading}>
+              <option value="">
+                {!form.flight_id ? "Choose a flight first…"
+                  : hotelsLoading ? "Loading hotels…"
+                  : hotels.length === 0 ? "No hotels for this destination"
+                  : "Choose a hotel…"}
+              </option>
               {Object.entries(hotelsByCity).map(([city, list]) => (
                 <optgroup key={city} label={city}>
                   {list.map((h) => (
@@ -123,6 +165,7 @@ export default function TravelerHome() {
             </div>
           </div>
         )}
+        <Errors errors={hotelErrors} />
         <Errors errors={rangeErrors} />
 
         <div className="grid">

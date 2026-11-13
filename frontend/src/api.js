@@ -30,7 +30,9 @@ const post = (path, body) => request(path, { method: "POST", body: body ? JSON.s
 
 export const api = {
   flights: () => request("/flights"),
-  hotels: () => request("/hotels"),
+  // 
+  hotels: (flightId) =>
+    request(flightId ? `/hotels?flight_id=${encodeURIComponent(flightId)}` : "/hotels"),
   companies: () => request("/companies"),
   priceRange: (flightId, hotelId) =>
     request(`/price-range?flight_id=${encodeURIComponent(flightId)}&hotel_id=${encodeURIComponent(hotelId)}`),
