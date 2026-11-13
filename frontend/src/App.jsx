@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { Link, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import useReveal from "./useReveal.js";
 import RolePicker from "./pages/RolePicker.jsx";
 import TravelerHome from "./pages/TravelerHome.jsx";
 import RequestOffers from "./pages/RequestOffers.jsx";
@@ -35,10 +37,13 @@ function NavBar() {
 }
 
 export default function App() {
+  const mainRef = useRef(null);
+  const { pathname } = useLocation();
+  useReveal(mainRef, pathname);
   return (
     <>
       <NavBar />
-      <main className="page">
+      <main className="page" ref={mainRef}>
         <Routes>
           <Route path="/" element={<RolePicker />} />
           <Route path="/traveler" element={<TravelerHome />} />

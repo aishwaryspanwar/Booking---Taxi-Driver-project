@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import Icon from "../components/Icon.jsx";
 import Errors, { toErrors } from "../components/Errors.jsx";
-import { inr, passengersText, statusText, timeOnly, when } from "../format.js";
+import { flightDetail, flightLabels, inr, passengersText, statusText, timeOnly, when } from "../format.js";
 import usePolling from "../usePolling.js";
 
 // M5: the booking number opens a summary. M7: send a change request and see the result.
@@ -146,6 +147,8 @@ function ChangeForm({ booking, onSent }) {
   const airport = booking.request.flight.to;
   const [flights, setFlights] = useState([]);
   const [flightId, setFlightId] = useState("");
+  const flightLabel = flightLabels(flights);
+  const shownFlight = flights.find((f) => f.flight_id === flightId) || (!flightId ? booking.request.flight : null);
   const [pickup, setPickup] = useState("");
   const [errors, setErrors] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -179,18 +182,19 @@ function ChangeForm({ booking, onSent }) {
       </p>
       <div className="grid">
         <div>
-          <label htmlFor="new-flight">New flight (optional)</label>
+          <label htmlFor="new-flight" className="with-icon"><Icon name="plane" size={13} />New flight (optional)</label>
           <select id="new-flight" value={flightId} onChange={(e) => setFlightId(e.target.value)}>
-            <option value="">Keep {booking.request.flight.flight_number} ({booking.request.flight.flight_id})</option>
+            <option value="">Keep {booking.request.flight.flight_number}</option>
             {flights.map((f) => (
               <option key={f.flight_id} value={f.flight_id}>
-                {f.flight_number} · {f.from}→{f.to} · lands {when(f.arrival_local)} ({f.flight_id})
+                {flightLabel(f)}
               </option>
             ))}
           </select>
+          {shownFlight && <p className="hint">{flightDetail(shownFlight)}</p>}
         </div>
         <div>
-          <label htmlFor="new-pickup">New pickup time (optional, local)</label>
+          <label htmlFor="new-pickup" className="with-icon"><Icon name="clock" size={13} />New pickup time (optional, local)</label>
           <input id="new-pickup" type="datetime-local" value={pickup} onChange={(e) => setPickup(e.target.value)} />
         </div>
       </div>

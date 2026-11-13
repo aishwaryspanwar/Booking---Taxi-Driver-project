@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api.js";
 import Errors, { toErrors } from "../components/Errors.jsx";
+import Icon from "../components/Icon.jsx";
 import { endsAt, inr, passengersText, priceLabel, statusText, timeOnly, when } from "../format.js";
 import usePolling from "../usePolling.js";
 
@@ -153,6 +154,7 @@ function RequestCard({ req, company, onAssigned }) {
   const [chosenId, setVehicleId] = useState(firstOk);
   // G1: after a car is assigned it is no longer "ok"; move to the next good car
   const vehicleId = req.cars.some((c) => c.vehicle_id === chosenId && c.ok) ? chosenId : firstOk;
+  const chosenCar = req.cars.find((c) => c.vehicle_id === vehicleId) || req.cars[0];
   const [expiresAt, setExpiresAt] = useState("");   // G4: "" = the offer never ends
   const [showCounter, setShowCounter] = useState(false);
   const [counterPrice, setCounterPrice] = useState("");
@@ -202,15 +204,19 @@ function RequestCard({ req, company, onAssigned }) {
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <label htmlFor={`car-${req.request_id}`}>Car</label>
+        <label htmlFor={`car-${req.request_id}`} className="with-icon"><Icon name="car" size={13} />Car</label>
         <select id={`car-${req.request_id}`} value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
           {req.cars.map((c) => (
             <option key={c.vehicle_id} value={c.vehicle_id}>
-              {c.vehicle_id} · {c.type} · {c.seats} seats · {c.large_bags}L/{c.small_bags}S bags —{" "}
-              {carStatus(c)}
+              {c.vehicle_id}{c.ok ? "" : " (unavailable)"}
             </option>
           ))}
         </select>
+        {chosenCar && (
+          <p className={`hint${chosenCar.ok ? "" : " bad"}`}>
+            {chosenCar.type} · {chosenCar.seats} seats · {chosenCar.large_bags} large / {chosenCar.small_bags} small bags · {carStatus(chosenCar)}
+          </p>
+        )}
         {req.car_type && (
           <div className="small muted">The traveler asked for a {req.car_type}; only that type can be assigned.</div>
         )}

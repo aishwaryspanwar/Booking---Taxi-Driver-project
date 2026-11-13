@@ -3,6 +3,7 @@ Booking summary (M5) and change requests (M7 / R9).
 
 Traveler:
     GET  /api/bookings                             -> every booking, newest first
+    GET  /api/bookings/active                      -> bookings whose ride is not over yet
     GET  /api/bookings/{booking_number}            -> booking summary, or 404 "not found"
     POST /api/bookings/{booking_number}/changes    -> ask for a new flight and/or pickup
 
@@ -12,6 +13,7 @@ Supplier:
     POST /api/changes/{change_id}/reject           -> reject (the old booking stays)
 """
 from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -19,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from .. import rules
 from ..db import get_db
-from ..models import Booking, ChangeRequest, Company, Flight, Offer
+from ..models import Airport, Booking, ChangeRequest, Company, Flight, Offer
 from ..rules import RuleError, RuleViolation
 from ..schemas import ChangeIn, DecisionIn, flight_out, iso, request_out, vehicle_out
 
@@ -132,6 +134,44 @@ def list_bookings(db: Session = Depends(get_db)):
     bookings = db.scalars(query).all()
 
     return [booking_summary(db, booking) for booking in bookings]
+
+
+# =============================================================================
+# GET /api/bookings/active
+#
+# Purpose : bookings whose ride is still going (the car is not back yet), for the
+#           "continue an existing booking" dropdown on the first page.
+# Output  : [{booking_number, traveler_name, city, hotel, pickup, supplier}], soonest pickup first
+# Note    : booking times are naive local time of the arrival airport, so "now" is
+#           taken in that airport's time zone before comparing.
+#           Declared before /bookings/{booking_number} so "active" is not read as a number.
+# =============================================================================
+def _airport_now(airport: Airport | None) -> datetime:
+    try:
+        return datetime.now(ZoneInfo(airport.timezone)).replace(tzinfo=None)
+    except (AttributeError, ZoneInfoNotFoundError, ValueError):
+        return datetime.now()
+
+
+@router.get("/bookings/active")
+def active_bookings(db: Session = Depends(get_db)):
+    bookings = db.scalars(select(Booking).order_by(Booking.busy_start)).all()
+
+    result = []
+    for booking in bookings:
+        ride_request = booking.offer.request
+        airport = db.get(Airport, ride_request.flight.to_airport)
+        if booking.busy_end <= _airport_now(airport):
+            continue  # ride finished
+        result.append({
+            "booking_number": booking.booking_number,
+            "traveler_name": ride_request.traveler_name,
+            "city": ride_request.hotel.city,
+            "hotel": ride_request.hotel.name,
+            "pickup": iso(ride_request.pickup),
+            "supplier": booking.offer.company.name,
+        })
+    return result
 
 
 # =============================================================================

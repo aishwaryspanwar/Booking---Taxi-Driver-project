@@ -121,7 +121,6 @@ h3 { font-size: 20px; line-height: 1.3; font-weight: 500; letter-spacing: -.01em
   background: var(--glass); border: 1px solid var(--line); border-radius: var(--r-lg);
   -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: var(--e1);
   padding: 24px; margin-bottom: 20px;
-  animation: rise .6s cubic-bezier(.2, .7, .2, 1) both;
 }
 .card:hover { border-color: var(--line-strong); }
 
@@ -236,3 +235,106 @@ tbody tr:hover { background: rgba(255, 255, 255, .03); }
   h1 { font-size: 30px; }
   .card { padding: 18px; }
 }
+
+/* ---------- Traveler request form ---------- */
+.req-form { padding: 22px 24px; }
+.req-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.req-form fieldset + fieldset { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.req-form legend {
+  padding: 0; margin-bottom: 10px;
+  font-size: 15px; font-weight: 600; color: var(--cream); letter-spacing: .01em;
+}
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; align-items: start; }
+.form-grid.trip { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr) minmax(0, 1.2fr); }
+.form-grid .wide { grid-column: 1 / -1; }
+.req-form .range { margin: 14px 0 0; }
+.label { display: block; font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+.opt { text-transform: none; letter-spacing: 0; }
+.hint { margin: 4px 0 0; font-size: 12.5px; line-height: 18px; color: var(--text-3); }
+.hint .btn-link {
+  padding: 0; min-height: 0; border: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  font-size: inherit; color: var(--accent); text-decoration: underline; text-underline-offset: 2px;
+}
+.hint .btn-link:hover { color: var(--cream); background: none; transform: none; }
+.form-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+/* Steppers: − value + in one field */
+.stepper {
+  display: flex; align-items: stretch; height: 52px; overflow: hidden;
+  border: 1px solid var(--line-strong); border-radius: var(--r-md); background: rgba(255, 255, 255, .05);
+  transition: border-color .15s, box-shadow .15s;
+}
+.stepper:hover { border-color: rgba(255, 255, 255, .4); }
+.stepper:focus-within { border-color: rgba(242, 237, 228, .7); box-shadow: var(--focus); }
+.stepper input {
+  flex: 1; min-width: 0; min-height: 0; height: 100%; padding: 0; text-align: center;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; -moz-appearance: textfield;
+}
+.stepper input:focus { background: transparent; box-shadow: none; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper button {
+  flex: none; width: 46px; padding: 0; border: 0; border-radius: 0;
+  background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+  color: var(--cream); font-size: 20px; line-height: 1;
+}
+.stepper button:hover:not(:disabled) { background: rgba(255, 255, 255, .08); transform: none; }
+.stepper button:disabled { color: var(--text-3); opacity: .45; cursor: default; }
+.stepper button:focus-visible { outline: none; background: rgba(255, 255, 255, .12); }
+.form-grid.people { grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.6fr); }
+
+/* Car type chips (radio group) */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  position: relative; display: inline-flex; align-items: center; margin: 0;
+  min-height: 40px; padding: 0 16px; border-radius: var(--r-full); cursor: pointer;
+  border: 1px solid var(--line-strong); background: rgba(255, 255, 255, .05);
+  font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-2);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.chip:hover { border-color: rgba(255, 255, 255, .4); color: var(--cream); }
+.chip.on { background: var(--cream); border-color: var(--cream); color: var(--on-cream); }
+.chip input { position: absolute; opacity: 0; width: 1px; height: 1px; min-height: 0; margin: 0; pointer-events: none; }
+.chip:has(input:focus-visible) { box-shadow: var(--focus); }
+
+/* Price: ₹ prefix */
+.prefix-input { position: relative; max-width: 280px; }
+.prefix-input > span {
+  position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+  color: var(--text-2); font-weight: 600; pointer-events: none;
+}
+.prefix-input input { padding-left: 34px; font-variant-numeric: tabular-nums; }
+.req-form input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(.9); cursor: pointer; opacity: .8; }
+
+@media (max-width: 900px) {
+  .form-grid.trip, .form-grid.people { grid-template-columns: 1fr 1fr; }
+  .form-grid.people > :last-child { grid-column: 1 / -1; }
+  .form-grid.trip > :first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .req-form { padding: 18px 16px; }
+  .form-grid, .form-grid.trip { grid-template-columns: 1fr; }
+  .form-grid.people { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .prefix-input { max-width: none; }
+  .form-actions button { width: 100%; }
+}
+
+/* ---------- Smooth reveal (useReveal.js) ---------- */
+[data-reveal] {
+  opacity: 0; transform: translateY(16px);
+  transition: opacity .7s cubic-bezier(.2, .7, .2, 1), transform .7s cubic-bezier(.2, .7, .2, 1);
+}
+[data-reveal].revealed { opacity: 1; transform: none; }
+tr[data-reveal] { transform: translateY(8px); transition-duration: .5s; }
+tr[data-reveal].revealed { transform: none; }
+@media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; } }
+
+/* ---------- Icons ---------- */
+.icon { flex: none; }
+.with-icon { display: inline-flex; align-items: center; gap: 6px; }
+label.with-icon, .label.with-icon { display: flex; }
+.with-icon .icon { opacity: .85; }
+.over.with-icon .icon { opacity: 1; }
+.hint.bad { color: var(--danger); }
+
+@media (max-width: 420px) { .stepper button { width: 34px; font-size: 18px; } .form-grid.people { gap: 14px 10px; } }

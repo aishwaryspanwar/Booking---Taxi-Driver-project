@@ -2,22 +2,26 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import Errors, { toErrors } from "../components/Errors.jsx";
+import Icon from "../components/Icon.jsx";
+import { when } from "../format.js";
 
 export default function RolePicker() {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [errors, setErrors] = useState(null);
   const [companyId, setCompanyId] = useState("");
-  const [travelers, setTravelers] = useState([]);   // requests still open or booked
-  const [requestId, setRequestId] = useState("");
+  const [bookings, setBookings] = useState([]);   // bookings whose ride is not over yet
+  const [bookingNumber, setBookingNumber] = useState("");
 
   useEffect(() => {
     api.companies().then(setCompanies, (e) => setErrors(toErrors(e)));
-    api.listRequests().then(
-      (list) => setTravelers(list.filter((r) => r.status === "OPEN" || r.status === "BOOKED")),
-      (e) => setErrors(toErrors(e))
-    );
+    api.activeBookings().then(setBookings, (e) => setErrors(toErrors(e)));
   }, []);
+
+  // Two bookings under the same name get their booking number so they can be told apart.
+  const sameName = (b) => bookings.filter((x) => x.traveler_name === b.traveler_name).length > 1;
+  const chosenBooking = bookings.find((b) => b.booking_number === bookingNumber);
+  const chosenCompany = companies.find((c) => c.company_id === companyId);
 
   return (
     <>
@@ -33,7 +37,7 @@ export default function RolePicker() {
 
       <div className="roles">
         <div className="card">
-          <span className="over">Traveler</span>
+          <span className="over with-icon"><Icon name="luggage" size={14} />Traveler</span>
           <h3>I need a ride to my hotel</h3>
           <p className="grow">
             Pick your flight and hotel, see the suggested price range, post your price, then book the taxi you like.
@@ -41,31 +45,36 @@ export default function RolePicker() {
           <div>
             <button className="primary lg" onClick={() => navigate("/traveler")}>Start as a new traveler</button>
           </div>
-          {travelers.length > 0 && (
+          {bookings.length > 0 && (
             <>
-              <label htmlFor="traveler" style={{ marginTop: 20 }}>Or continue an existing request</label>
+              <label htmlFor="booking" style={{ marginTop: 20 }}>Or open an existing booking</label>
               <div className="row">
-                <select id="traveler" style={{ flex: 1, minWidth: 240 }} value={requestId}
-                  onChange={(e) => setRequestId(e.target.value)}>
-                  <option value="">Select your traveler ID…</option>
-                  {travelers.map((r) => (
-                    <option key={r.request_id} value={r.request_id}>
-                      {r.request_id} · {r.traveler_name} · {r.hotel.city} ·{" "}
-                      {r.status === "BOOKED" ? `Booked ${r.booking_number ?? ""}`.trim() : `Open, ${r.offer_count} taxi offers`}
+                <select id="booking" style={{ flex: 1, minWidth: 240 }} value={bookingNumber}
+                  onChange={(e) => setBookingNumber(e.target.value)}>
+                  <option value="">Select your name…</option>
+                  {bookings.map((b) => (
+                    <option key={b.booking_number} value={b.booking_number}>
+                      {sameName(b) ? `${b.traveler_name} (${b.booking_number})` : b.traveler_name}
                     </option>
                   ))}
                 </select>
-                <button className="primary" disabled={!requestId}
-                  onClick={() => navigate(`/traveler/requests/${requestId}`)}>
+                <button className="primary" disabled={!bookingNumber}
+                  onClick={() => navigate(`/bookings/${bookingNumber}`)}>
                   Continue
                 </button>
               </div>
+              {chosenBooking && (
+                <p className="hint">
+                  {chosenBooking.booking_number} · {chosenBooking.hotel}, {chosenBooking.city} ·
+                  pickup {when(chosenBooking.pickup)} · {chosenBooking.supplier}
+                </p>
+              )}
             </>
           )}
         </div>
 
         <div className="card">
-          <span className="over">Taxi supplier</span>
+          <span className="over with-icon"><Icon name="car" size={14} />Taxi supplier</span>
           <h3>I drive airport rides</h3>
           <label htmlFor="supplier">Choose your company</label>
           <div className="row">
@@ -74,7 +83,7 @@ export default function RolePicker() {
             <option value="">Select a taxi supplier…</option>
             {companies.map((c) => (
               <option key={c.company_id} value={c.company_id}>
-                {c.name} · {c.airports.join(", ")} · {c.vehicles.length} cars · open {c.service_from}–{c.service_until}
+                {c.name}
               </option>
             ))}
           </select>
@@ -82,6 +91,12 @@ export default function RolePicker() {
             Continue
           </button>
           </div>
+          {chosenCompany && (
+            <p className="hint">
+              {chosenCompany.airports.join(", ")} · {chosenCompany.vehicles.length} cars ·
+              open {chosenCompany.service_from}–{chosenCompany.service_until}
+            </p>
+          )}
         </div>
       </div>
     </>

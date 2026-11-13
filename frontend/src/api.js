@@ -49,6 +49,7 @@ export const api = {
 
   // Booking summary (M5) and change requests (M7)
   listBookings: () => request("/bookings"),
+  activeBookings: () => request("/bookings/active"),
   getBooking: (number) => request(`/bookings/${encodeURIComponent(number)}`),
   requestChange: (number, body) => post(`/bookings/${encodeURIComponent(number)}/changes`, body),
   supplierChanges: (companyId) => request(`/suppliers/${encodeURIComponent(companyId)}/changes`),

@@ -33,3 +33,21 @@ export function passengersText(r) {
   const kids = r.child_ages.length ? ` + ${r.child_ages.length} child (age ${r.child_ages.join(", ")})` : "";
   return `${r.adults} adult${r.adults > 1 ? "s" : ""}${kids}`;
 }
+
+// "2027-04-10T11:30" -> "10 Apr"
+export function shortDate(iso) {
+  if (!iso) return "";
+  const [, m, d] = iso.split("T")[0].split("-");
+  return `${Number(d)} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(m) - 1]}`;
+}
+
+// Dropdown label for a flight: just the flight number. When the same number flies
+// more than once in the list, add the landing date so the options stay distinct.
+export function flightLabels(flights) {
+  const count = {};
+  flights.forEach((f) => { count[f.flight_number] = (count[f.flight_number] || 0) + 1; });
+  return (f) => (count[f.flight_number] > 1 ? `${f.flight_number} · ${shortDate(f.arrival_local)}` : f.flight_number);
+}
+
+// One line of detail for the flight chosen in a dropdown.
+export const flightDetail = (f) => (f ? `${f.from} → ${f.to} · lands ${when(f.arrival_local)}` : "");
