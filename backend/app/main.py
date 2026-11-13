@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import inspect, text
 
 from .db import Base, engine
 from .routers import bookings, catalog, requests, suppliers
@@ -23,6 +24,12 @@ app.add_middleware(
 @app.on_event("startup")
 def create_tables():
     Base.metadata.create_all(engine)
+    # create_all does not add new columns to existing tables. Add G4's
+    # offers.expires_at to a database created before the column existed.
+    columns = {c["name"] for c in inspect(engine).get_columns("offers")}
+    if "expires_at" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE offers ADD COLUMN expires_at TIMESTAMP NULL"))
 
 
 # Every error response has the same shape: {"errors": [{"rule": "...", "message": "..."}]}

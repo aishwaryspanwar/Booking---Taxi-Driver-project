@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api.js";
 import Errors, { toErrors } from "../components/Errors.jsx";
-import { inr, passengersText, priceLabel, statusText, timeOnly, when } from "../format.js";
+import { endsAt, inr, passengersText, priceLabel, statusText, timeOnly, when } from "../format.js";
 import usePolling from "../usePolling.js";
 
 export default function SupplierDashboard() {
@@ -12,8 +12,8 @@ export default function SupplierDashboard() {
 
   const [notice, setNotice] = useState(null);   // "Assigned SC-3 at ₹12,000 ..." after an offer
 
-  // After an offer: show the confirmation, then reload both lists
-  // (the request leaves "Requests you can serve" and appears in "Your taxis").
+  // After an offer: show the confirmation, then reload both lists. The request stays in
+  // "Requests you can serve" while another of your cars fits and is free (G1).
   const afterAssign = (message) => { setNotice(message); dash.reload(); mine.reload(); };
 
   if (dash.error && !dash.data) return <Errors errors={toErrors(dash.error)} />;
@@ -36,7 +36,8 @@ export default function SupplierDashboard() {
       <h2>Requests you can serve ({requests.length})</h2>
       {requests.length === 0 && (
         <p className="muted">
-          No new requests you can serve right now. Requests you already offered a car on are in “Your taxis”.
+          No new requests you can serve right now. Requests where all your fitting cars are already
+          offered are in “Your taxis”.
           Refreshes every 5 seconds.
         </p>
       )}
@@ -52,7 +53,7 @@ export default function SupplierDashboard() {
       ) : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Request</th><th>Traveler</th><th>Pickup</th><th>Car</th><th>Price</th><th>Status</th></tr></thead>
+            <thead><tr><th>Request</th><th>Traveler</th><th>Pickup</th><th>Car</th><th>Price</th><th>Ends</th><th>Status</th></tr></thead>
             <tbody>
               {mine.data.map((o) => (
                 <tr key={o.offer_id}>
@@ -61,6 +62,7 @@ export default function SupplierDashboard() {
                   <td>{when(o.pickup)}</td>
                   <td>{o.vehicle.type} · {o.vehicle.vehicle_id}</td>
                   <td>{inr(o.price_inr)}</td>
+                  <td>{o.expires_at ? endsAt(o.expires_at) : <span className="muted">never</span>}</td>
                   <td><span className={`tag ${o.status.toLowerCase()}`}>{statusText(o.status)}</span></td>
                 </tr>
               ))}
@@ -148,7 +150,10 @@ function carStatus(car) {
 
 function RequestCard({ req, company, onAssigned }) {
   const firstOk = req.cars.find((c) => c.ok)?.vehicle_id || "";
-  const [vehicleId, setVehicleId] = useState(firstOk);
+  const [chosenId, setVehicleId] = useState(firstOk);
+  // G1: after a car is assigned it is no longer "ok"; move to the next good car
+  const vehicleId = req.cars.some((c) => c.vehicle_id === chosenId && c.ok) ? chosenId : firstOk;
+  const [expiresAt, setExpiresAt] = useState("");   // G4: "" = the offer never ends
   const [showCounter, setShowCounter] = useState(false);
   const [counterPrice, setCounterPrice] = useState("");
   const [errors, setErrors] = useState(null);
@@ -162,10 +167,12 @@ function RequestCard({ req, company, onAssigned }) {
         company_id: company.company_id,
         vehicle_id: vehicleId,
         price_inr: price,
+        // datetime-local is the supplier's local time; send it as UTC
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       });
-      // The card leaves the list now (it is offered), so the dashboard shows the confirmation
-      onAssigned(`Assigned ${offer.vehicle.vehicle_id} at ${inr(offer.price_inr)} to ${req.request_id}. ` +
-        "It is in “Your taxis” until the traveler books or rejects it.");
+      onAssigned(`Assigned ${offer.vehicle.vehicle_id} at ${inr(offer.price_inr)} to ${req.request_id}` +
+        (offer.expires_at ? `, ends ${endsAt(offer.expires_at)}` : "") +
+        ". It is in “Your taxis”. You can assign more cars to this request while one is free.");
     } catch (err) {
       setErrors(toErrors(err));   // e.g. R6: car busy, R3: price out of range
     } finally {
@@ -175,7 +182,14 @@ function RequestCard({ req, company, onAssigned }) {
 
   return (
     <div className="card">
-      <h3>{req.traveler_name} · {req.request_id}</h3>
+      <h3>
+        {req.traveler_name} · {req.request_id}
+        {req.your_offer_count > 0 && (
+          <span className="tag open" style={{ marginLeft: 8 }}>
+            {req.your_offer_count} car{req.your_offer_count > 1 ? "s" : ""} offered
+          </span>
+        )}
+      </h3>
       <div className="grid small">
         <div><label>Flight</label>{req.flight.flight_number} ({req.flight.from}→{req.flight.to}), lands {when(req.flight.arrival_local)}</div>
         <div><label>Hotel</label>{req.hotel.name}, {req.hotel.area}, {req.hotel.city}</div>
@@ -197,6 +211,16 @@ function RequestCard({ req, company, onAssigned }) {
             </option>
           ))}
         </select>
+        {req.car_type && (
+          <div className="small muted">The traveler asked for a {req.car_type}; only that type can be assigned.</div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 12, maxWidth: 280 }}>
+        <label htmlFor={`exp-${req.request_id}`}>Offer ends (optional)</label>
+        <input id={`exp-${req.request_id}`} type="datetime-local" value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)} />
+        <div className="small muted">Your time zone. After this time the traveler cannot book this taxi.</div>
       </div>
 
       <div className="row" style={{ marginTop: 12 }}>

@@ -104,7 +104,18 @@ frontend/ (React + Vite)      ──fetch──►   backend/ (FastAPI)      ─
   new time (R6, ignoring the booking's own old time). If not, the platform refuses it, the
   change becomes rejected with the reason, and the old booking stays. The booking page shows
   every change and its result.
-- Car type (G2) is enforced, because `open_requests.json` uses it.
+- **G1 Several cars per supplier.** A supplier can assign several of its cars to one request,
+  each with its own price. The request stays on the dashboard while another of its cars fits,
+  is free and is not offered yet. The same car cannot be offered twice while its first offer is
+  open.
+- **G2 Car type.** The traveler can pick Hatchback, Sedan, SUV or Bus (or Any). A supplier can
+  only assign a car of that type (R5); other cars show the reason in the dropdown.
+- **G4 Offer expiry.** A supplier can set an optional end time when assigning a car. After that
+  time the taxi shows as "expired" and booking it is refused (409, rule G4). The end time must
+  be in the future. On startup the backend adds the `offers.expires_at` column to an existing
+  database.
+- **G5 Sort and filter.** On the request page the traveler can sort taxis by price (low to high
+  or high to low) and filter them by car type.
 - Seeded busy rides block cars. In the Menon case, Sakura's SC-2 is busy 11:00–14:00
   (RIDE-0001), so only SC-3 can be assigned.
 
@@ -114,8 +125,9 @@ frontend/ (React + Vite)      ──fetch──►   backend/ (FastAPI)      ─
   the supplier, route and price were agreed for that airport. One change can wait at a time.
   Accepting checks R2 and the car's free time, as R9 says; it does not re-check the
   supplier's opening hours, so the supplier should reject a time it can't serve.
-- **G1/G4/G5, S1/S2:** not built. A supplier can already assign several different cars to one
-  request.
+- **S1/S2:** not built.
+- **Offer end time (G4)** is stored in UTC. The supplier picks it in their own time zone and the
+  traveler sees it in theirs. It is precise to the minute.
 - There is no login, so the traveler page lists every request.
 - Polling every 5 s instead of push updates.
 - `seed.py` wipes the app data too, which is what the spec asked for ("drop + recreate").

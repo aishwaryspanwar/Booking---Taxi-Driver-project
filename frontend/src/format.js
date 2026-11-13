@@ -9,7 +9,17 @@ export function when(iso) {
   return `${Number(d)} ${month} ${y}, ${time.slice(0, 5)}`;
 }
 
-export const timeOnly = (iso) => (iso ? iso.split("T")[1].slice(0, 5) : "");
+// G4: offer end times come as UTC ("...Z") and show in the viewer's own time zone.
+export function endsAt(isoUtc) {
+  if (!isoUtc) return "";
+  return new Date(isoUtc).toLocaleString("en-GB", {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+export const CAR_TYPES = ["HATCHBACK", "SEDAN", "SUV", "BUS"];
+
+export const timeOnly =(iso) => (iso ? iso.split("T")[1].slice(0, 5) : "");
 
 export function priceLabel(offerPrice, travelerPrice) {
   const diff = offerPrice - travelerPrice;

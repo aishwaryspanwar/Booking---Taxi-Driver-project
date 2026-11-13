@@ -4,11 +4,15 @@ Supplier APIs.
     GET  /api/companies                        -> suppliers and their cars (role picker)
     GET  /api/suppliers/{company_id}/requests  -> open requests this supplier can serve (M2)
     GET  /api/suppliers/{company_id}/offers    -> taxis this supplier assigned, with status
-    POST /api/requests/{request_id}/offers     -> assign a car with a price (M3, R7)
+    POST /api/requests/{request_id}/offers     -> assign a car with a price (M3, R7),
+                                                  several cars per request (G1),
+                                                  optional end time (G4)
 
 Every rule check lives in rules.py. When anything fails we raise RuleViolation,
 and main.py sends it back as {"errors": [{"rule": "R6", "message": "..."}]}.
 """
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -78,24 +82,29 @@ def supplier_requests(company_id: str, db: Session = Depends(get_db)):
 
     result = []
     for ride_request in open_requests:
-        # 2. Already offered a car here (still waiting for the traveler)? Then it is
-        #    not a new request for this supplier: it shows in "Your taxis" instead.
-        #    If the traveler rejects that taxi, the request comes back here.
-        has_open_offer = any(
-            offer.company_id == company.company_id and offer.status == "OPEN"
-            for offer in ride_request.offers
-        )
-        if has_open_offer:
-            continue
-
         route = rules.request_route(db, ride_request)
         if not route:
             continue  # safety net: no route, nothing to serve
 
-        # 3. R4 for the company (airport, area, open at pickup) + R5/R6 for every car
+        # 2. R4 for the company (airport, area, open at pickup) + R5/R6 for every car
         company_errors, cars = rules.company_view_of_request(db, company, ride_request, route)
 
-        # 4. Skip it if the company fails R4, or if no car both fits and is free
+        # 3. G1: a supplier may assign several cars to one request. A car that is
+        #    already offered here (open and not ended, G4) cannot be offered again.
+        live_offers = [
+            offer for offer in ride_request.offers
+            if offer.company_id == company.company_id and offer.is_live
+        ]
+        offered_ids = {offer.vehicle_id for offer in live_offers}
+        cars = [
+            (vehicle, car_errors + ([RuleError("G1", f"{vehicle.vehicle_id} is already offered on "
+                                                     f"{ride_request.request_id}.")]
+                                    if vehicle.vehicle_id in offered_ids else []))
+            for vehicle, car_errors in cars
+        ]
+
+        # 4. Skip it if the company fails R4, or if no car is left that fits, is free
+        #    and is not offered yet. It then shows only in "Your taxis".
         has_good_car = any(not car_errors for _, car_errors in cars)
         if company_errors or not has_good_car:
             continue
@@ -104,6 +113,7 @@ def supplier_requests(company_id: str, db: Session = Depends(get_db)):
         _, busy_end = rules.busy_window(ride_request, route)
         item = request_out(ride_request, route)
         item["busy_end"] = iso(busy_end)
+        item["your_offer_count"] = len(live_offers)   # G1: cars already offered here
 
         # 6. Every car with "ok" or its problems (the dashboard's car dropdown)
         item["cars"] = [
@@ -200,13 +210,18 @@ def assign_car(request_id: str, body: OfferIn, db: Session = Depends(get_db)):
     # R3: the offered price must be inside the range (it may differ from the traveler's)
     errors += rules.check_price(body.price_inr, route, "The offered price")
 
-    # The same car cannot be offered twice on one request while the first is open
+    # G1: several cars per request are fine, but the same car cannot be offered
+    # twice while the first offer is still open and has not ended (G4)
     already_offered = any(
-        offer.vehicle_id == vehicle.vehicle_id and offer.status == "OPEN"
+        offer.vehicle_id == vehicle.vehicle_id and offer.is_live
         for offer in ride_request.offers
     )
     if already_offered:
-        errors.append(RuleError("R7", f"{vehicle.vehicle_id} is already assigned to {request_id}."))
+        errors.append(RuleError("G1", f"{vehicle.vehicle_id} is already assigned to {request_id}."))
+
+    # G4: an end time, if given, must be in the future
+    if body.expires_at is not None and body.expires_at <= datetime.utcnow():
+        errors.append(RuleError("G4", "The offer end time must be in the future."))
 
     # Anything wrong? Send every error. Nothing has been saved yet.
     if errors:
@@ -218,6 +233,7 @@ def assign_car(request_id: str, body: OfferIn, db: Session = Depends(get_db)):
         company_id=company.company_id,
         vehicle_id=vehicle.vehicle_id,
         price_inr=body.price_inr,
+        expires_at=body.expires_at,   # G4: None = never ends
         status="OPEN",             # waiting for the traveler to book or reject
     )
     db.add(offer)

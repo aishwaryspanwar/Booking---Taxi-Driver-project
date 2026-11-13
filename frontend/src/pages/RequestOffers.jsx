@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import Errors, { toErrors } from "../components/Errors.jsx";
-import { inr, passengersText, priceLabel, statusText, timeOnly, when } from "../format.js";
+import { CAR_TYPES, endsAt, inr, passengersText, priceLabel, statusText, timeOnly, when } from "../format.js";
 import usePolling from "../usePolling.js";
 
 export default function RequestOffers() {
@@ -11,6 +11,9 @@ export default function RequestOffers() {
   const { data: req, error, setData } = usePolling(() => api.getRequest(requestId), [requestId]);
   const [actionErrors, setActionErrors] = useState(null);
   const [busy, setBusy] = useState(false);
+  // G5: sort by price and filter by car type (done in the browser; the list is small)
+  const [sort, setSort] = useState("");          // "" (offer order) | "asc" | "desc"
+  const [typeFilter, setTypeFilter] = useState("");  // "" = all types
 
   async function act(fn) {
     setActionErrors(null);
@@ -28,6 +31,9 @@ export default function RequestOffers() {
   if (!req) return <p className="muted">Loading…</p>;
 
   const booked = req.offers.find((o) => o.status === "BOOKED");
+
+  const shownOffers = req.offers.filter((o) => !typeFilter || o.vehicle.type === typeFilter);
+  if (sort) shownOffers.sort((a, b) => (sort === "asc" ? a.price_inr - b.price_inr : b.price_inr - a.price_inr));
 
   return (
     <>
@@ -83,13 +89,35 @@ export default function RequestOffers() {
           {req.servable_by?.length > 0 && <> Suppliers who can serve you: {req.servable_by.join(", ")}.</>}
         </p>
       ) : (
+        <>
+        <div className="row" style={{ marginBottom: 12, alignItems: "flex-end" }}>
+          <div>
+            <label htmlFor="offer-sort">Sort by price</label>
+            <select id="offer-sort" value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="">As offered</option>
+              <option value="asc">Price: low to high</option>
+              <option value="desc">Price: high to low</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="offer-type">Car type</label>
+            <select id="offer-type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">All types</option>
+              {CAR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <span className="small muted">Showing {shownOffers.length} of {req.offers.length}</span>
+        </div>
+        {shownOffers.length === 0 ? (
+          <p className="muted">No taxi of type {typeFilter}. Choose another car type.</p>
+        ) : (
         <div className="table-scroll">
           <table>
             <thead>
               <tr><th>Supplier</th><th>Car</th><th>Price</th><th></th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
-              {req.offers.map((o) => {
+              {shownOffers.map((o) => {
                 const diff = o.price_inr - req.price_inr;
                 return (
                   <tr key={o.offer_id}>
@@ -104,7 +132,14 @@ export default function RequestOffers() {
                     <td className={diff === 0 ? "diff-same" : diff > 0 ? "diff-up" : "diff-down"}>
                       {priceLabel(o.price_inr, req.price_inr)}
                     </td>
-                    <td><span className={`tag ${o.status.toLowerCase()}`}>{statusText(o.status)}</span></td>
+                    <td>
+                      <span className={`tag ${o.status.toLowerCase()}`}>{statusText(o.status)}</span>
+                      {o.expires_at && (
+                        <div className="small muted">
+                          {o.status === "EXPIRED" ? "ended" : "ends"} {endsAt(o.expires_at)}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       {o.status === "OPEN" && req.status === "OPEN" && (
                         <div className="row">
@@ -119,6 +154,8 @@ export default function RequestOffers() {
             </tbody>
           </table>
         </div>
+        )}
+        </>
       )}
       {req.booking && (
         <p className="small muted">

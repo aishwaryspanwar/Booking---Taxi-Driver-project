@@ -126,9 +126,30 @@ class Offer(Base):
     vehicle_id: Mapped[str] = mapped_column(ForeignKey("vehicles.vehicle_id"))
     price_inr: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String, default="OPEN")  # OPEN | BOOKED | REJECTED | NOT_CHOSEN
+    # G4: when this taxi offer ends (UTC, naive). None = never ends.
+    # An OPEN offer past this time shows as EXPIRED and cannot be booked.
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     request: Mapped[RideRequest] = relationship(back_populates="offers")
+
+    def is_expired(self, now: datetime | None = None) -> bool:
+        """G4: an offer has ended when its end time is in the past."""
+        if self.expires_at is None:
+            return False
+        return self.expires_at <= (now or datetime.utcnow())
+
+    @property
+    def is_live(self) -> bool:
+        """OPEN and not ended: the traveler can still book it."""
+        return self.status == "OPEN" and not self.is_expired()
+
+    @property
+    def effective_status(self) -> str:
+        """The status people see: an OPEN offer past its end time is EXPIRED."""
+        if self.status == "OPEN" and self.is_expired():
+            return "EXPIRED"
+        return self.status
     company: Mapped[Company] = relationship()
     vehicle: Mapped[Vehicle] = relationship()
 

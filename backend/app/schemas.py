@@ -1,5 +1,5 @@
 """Pydantic input models and plain-dict serializers for API output."""
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -36,6 +36,23 @@ class OfferIn(BaseModel):
     company_id: str
     vehicle_id: str
     price_inr: int
+    # G4: when the offer ends. The browser sends an ISO time with an offset
+    # (e.g. "2027-04-10T09:00:00.000Z"); it is stored as naive UTC. None = never ends.
+    expires_at: datetime | None = None
+
+    @field_validator("expires_at", mode="before")
+    @classmethod
+    def blank_expiry(cls, v):
+        return v or None
+
+    @field_validator("expires_at")
+    @classmethod
+    def to_naive_utc(cls, v):
+        if v is None:
+            return v
+        if v.tzinfo is not None:
+            v = v.astimezone(timezone.utc).replace(tzinfo=None)
+        return v.replace(second=0, microsecond=0)
 
 
 class ChangeIn(BaseModel):
@@ -96,8 +113,15 @@ def company_out(c: Company, with_vehicles: bool = False) -> dict:
 def offer_out(o: Offer) -> dict:
     return {"offer_id": o.id, "request_id": o.request_id, "company_id": o.company_id,
             "company_name": o.company.name, "company_rating": o.company.rating,
-            "vehicle": vehicle_out(o.vehicle), "price_inr": o.price_inr, "status": o.status,
+            "vehicle": vehicle_out(o.vehicle), "price_inr": o.price_inr,
+            "status": o.effective_status,     # OPEN | EXPIRED | BOOKED | REJECTED | NOT_CHOSEN
+            # G4: UTC with a "Z" so the browser shows it in the viewer's own time zone
+            "expires_at": utc_iso(o.expires_at),
             "created_at": iso(o.created_at)}
+
+
+def utc_iso(d: datetime | None) -> str | None:
+    return d.strftime("%Y-%m-%dT%H:%M:00Z") if d else None
 
 
 def booking_out(b: Booking) -> dict:

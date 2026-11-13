@@ -240,9 +240,9 @@ def get_request(request_id: str, db: Session = Depends(get_db)):
 def reject_offer(offer_id: int, db: Session = Depends(get_db)):
     offer = _get_offer(db, offer_id)
 
-    # Only an open taxi can be rejected (not a booked, rejected or not chosen one)
-    if offer.status != "OPEN":
-        status_text = offer.status.lower().replace("_", " ")   # NOT_CHOSEN -> "not chosen"
+    # Only an open taxi can be rejected (not a booked, rejected, not chosen or ended one)
+    if offer.effective_status != "OPEN":
+        status_text = offer.effective_status.lower().replace("_", " ")   # NOT_CHOSEN -> "not chosen"
         raise RuleViolation(
             [RuleError("R8", f"This taxi is {status_text}; only an open taxi can be rejected.")],
             status_code=409,
@@ -283,6 +283,14 @@ def book_offer(offer_id: int, db: Session = Depends(get_db)):
             status_code=409,
         )
 
+    # G4: the supplier set an end time for this taxi, and it has passed
+    if offer.is_expired():
+        raise RuleViolation(
+            [RuleError("G4", f"This taxi offer ended at {offer.expires_at:%d %b %Y %H:%M} UTC; "
+                             "an ended taxi cannot be booked.")],
+            status_code=409,
+        )
+
     # ---- Step 2: is the car still free? (R6, M6) ---------------------------
     # The car is busy from pickup until pickup + 2 x drive time (there and back).
     route = rules.request_route(db, ride_request)
@@ -307,7 +315,8 @@ def book_offer(offer_id: int, db: Session = Depends(get_db)):
     # ---- Step 4: update the statuses ---------------------------------------
     offer.status = "BOOKED"
     for other_offer in ride_request.offers:
-        # Every other taxi that is still open was "not chosen" (rejected ones stay rejected)
+        # Every other taxi that is still open was "not chosen" (rejected ones stay rejected).
+        # Ended (G4) offers become "not chosen" too: the request is booked now.
         if other_offer.id != offer.id and other_offer.status == "OPEN":
             other_offer.status = "NOT_CHOSEN"
     ride_request.status = "BOOKED"     # suppliers stop seeing this request
