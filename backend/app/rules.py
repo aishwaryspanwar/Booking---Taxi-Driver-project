@@ -152,7 +152,7 @@ def check_car_fits(vehicle: Vehicle, req: RideRequest) -> list[RuleError]:
                                       f"the request has {req.small_bags}."))
     if req.car_type and vehicle.type != req.car_type:
         errors.append(RuleError("R5", f"{vehicle.vehicle_id} is a {vehicle.type}; "
-                                      f"the traveler asked for a {req.car_type}."))
+                                      f"the traveller asked for a {req.car_type}."))
     return errors
 
 

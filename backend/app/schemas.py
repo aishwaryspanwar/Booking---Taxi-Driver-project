@@ -9,7 +9,7 @@ from .models import Booking, Company, Flight, Hotel, Offer, RideRequest, Route, 
 # ---------- Inputs ----------
 
 class RideRequestIn(BaseModel):
-    traveler_name: str = Field(default="Traveler", max_length=100)
+    traveler_name: str = Field(default="Traveller", max_length=100)
     flight_id: str
     hotel_id: str
     adults: int

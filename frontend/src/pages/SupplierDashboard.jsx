@@ -54,7 +54,7 @@ export default function SupplierDashboard() {
       ) : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Request</th><th>Traveler</th><th>Pickup</th><th>Car</th><th>Price</th><th>Ends</th><th>Status</th></tr></thead>
+            <thead><tr><th>Request</th><th>Traveller</th><th>Pickup</th><th>Car</th><th>Price</th><th>Ends</th><th>Status</th></tr></thead>
             <tbody>
               {mine.data.map((o) => (
                 <tr key={o.offer_id}>
@@ -106,7 +106,7 @@ function ChangeRequests({ companyId }) {
       <div className="table-scroll">
         <table>
           <thead>
-            <tr><th>Booking</th><th>Traveler</th><th>From</th><th>To</th><th>Status</th><th></th></tr>
+            <tr><th>Booking</th><th>Traveller</th><th>From</th><th>To</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {changes.map((c) => (
@@ -196,10 +196,10 @@ function RequestCard({ req, company, onAssigned }) {
         <div><label>Flight</label>{req.flight.flight_number} ({req.flight.from}→{req.flight.to}), lands {when(req.flight.arrival_local)}</div>
         <div><label>Hotel</label>{req.hotel.name}, {req.hotel.area}, {req.hotel.city}</div>
         <div><label>Pickup → car busy</label>{when(req.pickup)} → {timeOnly(req.busy_end)}</div>
-        <div><label>Travelers</label>{passengersText(req)} ({req.passengers} seats)</div>
+        <div><label>Travellers</label>{passengersText(req)} ({req.passengers} seats)</div>
         <div><label>Bags</label>{req.large_bags} large, {req.small_bags} small</div>
         <div><label>Car type</label>{req.car_type || "Any"}</div>
-        <div><label>Traveler's price</label><strong>{inr(req.price_inr)}</strong></div>
+        <div><label>Traveller's price</label><strong>{inr(req.price_inr)}</strong></div>
         <div><label>Allowed range</label>{inr(req.route.price_min_inr)} – {inr(req.route.price_max_inr)}</div>
       </div>
 
@@ -218,7 +218,7 @@ function RequestCard({ req, company, onAssigned }) {
           </p>
         )}
         {req.car_type && (
-          <div className="small muted">The traveler asked for a {req.car_type}; only that type can be assigned.</div>
+          <div className="small muted">The traveller asked for a {req.car_type}; only that type can be assigned.</div>
         )}
       </div>
 
@@ -226,7 +226,7 @@ function RequestCard({ req, company, onAssigned }) {
         <label htmlFor={`exp-${req.request_id}`}>Offer ends (optional)</label>
         <input id={`exp-${req.request_id}`} type="datetime-local" value={expiresAt}
           onChange={(e) => setExpiresAt(e.target.value)} />
-        <div className="small muted">Your time zone. After this time the traveler cannot book this taxi.</div>
+        <div className="small muted">Your time zone. After this time the traveller cannot book this taxi.</div>
       </div>
 
       <div className="row" style={{ marginTop: 12 }}>
@@ -244,7 +244,7 @@ function RequestCard({ req, company, onAssigned }) {
             Send offer
           </button>
           {counterPrice !== "" && !isNaN(Number(counterPrice)) && (
-            <span className="small muted">{priceLabel(Number(counterPrice), req.price_inr)} vs traveler</span>
+            <span className="small muted">{priceLabel(Number(counterPrice), req.price_inr)} vs traveller</span>
           )}
         </div>
       )}

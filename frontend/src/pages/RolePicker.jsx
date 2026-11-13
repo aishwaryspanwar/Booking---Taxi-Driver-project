@@ -29,7 +29,7 @@ export default function RolePicker() {
         <span className="over">Airport taxi · Ride offers</span>
         <h1 className="display">Your ride from the airport,<br />at the price you choose.</h1>
         <p className="lede">
-          Travelers post a ride with their price. Taxi suppliers answer with a car and a price.
+          Travellers post a ride with their price. Taxi suppliers answer with a car and a price.
           No login needed: pick who you are, and switch at any time.
         </p>
       </section>
@@ -37,13 +37,13 @@ export default function RolePicker() {
 
       <div className="roles">
         <div className="card">
-          <span className="over with-icon"><Icon name="luggage" size={14} />Traveler</span>
+          <span className="over with-icon"><Icon name="luggage" size={14} />Traveller</span>
           <h3>I need a ride to my hotel</h3>
           <p className="grow">
             Pick your flight and hotel, see the suggested price range, post your price, then book the taxi you like.
           </p>
           <div>
-            <button className="primary lg" onClick={() => navigate("/traveler")}>Start as a new traveler</button>
+            <button className="primary lg" onClick={() => navigate("/traveler")}>Start as a new traveller</button>
           </div>
           {bookings.length > 0 && (
             <>

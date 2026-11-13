@@ -35,13 +35,13 @@ function AllBookings() {
       <h2>All bookings ({bookings.length})</h2>
       {bookings.length === 0 ? (
         <p className="muted">
-          No bookings yet. A booking appears here after the traveler clicks <strong>Book</strong> on a taxi.
+          No bookings yet. A booking appears here after the traveller clicks <strong>Book</strong> on a taxi.
         </p>
       ) : (
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Booking</th><th>Traveler</th><th>Ride</th><th>Pickup</th><th>Supplier · car</th><th>Price</th><th>Change</th></tr>
+              <tr><th>Booking</th><th>Traveller</th><th>Ride</th><th>Pickup</th><th>Supplier · car</th><th>Price</th><th>Change</th></tr>
             </thead>
             <tbody>
               {bookings.map((b) => {
@@ -120,7 +120,7 @@ function Summary({ number }) {
           <div><label>Flight</label>{r.flight.flight_number} ({r.flight.from}→{r.flight.to}), lands {when(r.flight.arrival_local)}</div>
           <div><label>Hotel</label>{r.hotel.name}, {r.hotel.area}, {r.hotel.city}</div>
           <div><label>Pickup</label>{when(r.pickup)} at {r.flight.to}</div>
-          <div><label>Travelers</label>{passengersText(r)}</div>
+          <div><label>Travellers</label>{passengersText(r)}</div>
           <div><label>Bags</label>{r.large_bags} large, {r.small_bags} small</div>
           <div><label>Supplier</label>{booking.supplier.name} <span className="small muted">· rating {booking.supplier.rating}</span></div>
           <div><label>Car</label>{booking.vehicle.type} · {booking.vehicle.vehicle_id} <span className="small muted">({booking.vehicle.seats} seats)</span></div>

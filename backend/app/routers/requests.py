@@ -166,7 +166,7 @@ def create_request(body: RideRequestIn, db: Session = Depends(get_db)):
     # ---- Step 2: save the request ------------------------------------------
     ride_request = RideRequest(
         request_id=_next_request_id(db),
-        traveler_name=body.traveler_name.strip() or "Traveler",
+        traveler_name=body.traveler_name.strip() or "Traveller",
         flight_id=flight.flight_id,
         hotel_id=hotel.hotel_id,
         adults=body.adults,

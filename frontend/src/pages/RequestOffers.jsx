@@ -47,7 +47,7 @@ export default function RequestOffers() {
         <div><label>Flight</label>{req.flight.flight_number} ({req.flight.from}→{req.flight.to}), lands {when(req.flight.arrival_local)}</div>
         <div><label>Hotel</label>{req.hotel.name}, {req.hotel.area}, {req.hotel.city}</div>
         <div><label>Pickup</label>{when(req.pickup)}</div>
-        <div><label>Travelers</label>{passengersText(req)}</div>
+        <div><label>Travellers</label>{passengersText(req)}</div>
         <div><label>Bags</label>{req.large_bags} large, {req.small_bags} small</div>
         <div><label>Car type</label>{req.car_type || "Any"}</div>
         <div><label>Your price</label><strong>{inr(req.price_inr)}</strong></div>

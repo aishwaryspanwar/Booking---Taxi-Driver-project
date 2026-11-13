@@ -207,7 +207,7 @@ tbody tr:hover { background: rgba(255, 255, 255, .03); }
 .tag.waiting { background: var(--warning-tint); color: var(--warning); border-color: rgba(240, 201, 135, .25); }
 .tag.accepted { background: var(--success-tint); color: var(--success); border-color: rgba(143, 220, 176, .25); }
 
-/* Offer price vs traveler price */
+/* Offer price vs traveller price */
 .diff-same { color: var(--success); font-weight: 500; }
 .diff-up { color: var(--warning); font-weight: 500; }
 .diff-down { color: var(--success); font-weight: 500; }
@@ -236,7 +236,7 @@ tbody tr:hover { background: rgba(255, 255, 255, .03); }
   .card { padding: 18px; }
 }
 
-/* ---------- Traveler request form ---------- */
+/* ---------- Traveller request form ---------- */
 .req-form { padding: 22px 24px; }
 .req-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .req-form fieldset + fieldset { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }

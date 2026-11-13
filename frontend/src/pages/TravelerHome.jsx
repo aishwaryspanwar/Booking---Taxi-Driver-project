@@ -133,7 +133,7 @@ export default function TravelerHome() {
   return (
     <>
       <div className="page-head">
-        <span className="over">Traveler</span>
+        <span className="over">Traveller</span>
         <h1>Request a ride</h1>
         <p className="lede">Choose your flight and hotel to see the suggested price range, then post your price.</p>
       </div>
@@ -197,7 +197,7 @@ export default function TravelerHome() {
         </fieldset>
 
         <fieldset>
-          <legend>Travelers and luggage</legend>
+          <legend>Travellers and luggage</legend>
           <div className="form-grid people">
             <Stepper id="adults" label="Adults" min={1} max={9} value={form.adults} onChange={set("adults")} />
             <Stepper id="large" label="Large bags" min={0} max={6} value={form.large_bags} onChange={set("large_bags")} />
@@ -271,7 +271,7 @@ export default function TravelerHome() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Request</th><th>Traveler</th><th>Route</th><th>Pickup</th><th>Price</th><th>Taxis</th><th>Status</th><th></th></tr>
+              <tr><th>Request</th><th>Traveller</th><th>Route</th><th>Pickup</th><th>Price</th><th>Taxis</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               {myRequests.map((r) => (
