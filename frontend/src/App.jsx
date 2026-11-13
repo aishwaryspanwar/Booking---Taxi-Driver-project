@@ -20,24 +20,15 @@ function Logo() {
 }
 
 function NavBar() {
-  const { pathname } = useLocation();
+
   const navigate = useNavigate();
-  const links = [
-    { to: "/", label: "Choose role", on: pathname === "/" },
-    { to: "/traveler", label: "Traveler", on: pathname.startsWith("/traveler") },
-    { to: "/bookings", label: "My booking", on: pathname.startsWith("/bookings") },
-    { to: "/", label: "Suppliers", on: pathname.startsWith("/supplier") },
-  ];
+ 
   return (
     <header className="nav-top">
       <Logo />
-      <nav className="nav-pill" aria-label="Main">
-        {links.map((l) => (
-          <Link key={l.label} to={l.to} className={l.on ? "on" : ""}>{l.label}</Link>
-        ))}
-      </nav>
+      
       <div className="nav-right">
-        <button onClick={() => navigate("/")}>Switch role</button>
+        <button onClick={() => navigate("/bookings")}>Bookings</button>
       </div>
     </header>
   );
